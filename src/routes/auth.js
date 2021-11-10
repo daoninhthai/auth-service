@@ -9,6 +9,9 @@ router.post('/register', validate(registerSchema), AuthController.register);
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), AuthController.login);
 
+// POST /api/auth/refresh-token
+router.post('/refresh-token', AuthController.refreshToken);
+
 // POST /api/auth/logout
 router.post('/logout', AuthController.logout);
 

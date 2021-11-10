@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
 const TokenService = require('../services/tokenService');
 
 const SALT_ROUNDS = 12;
@@ -34,6 +35,14 @@ class AuthController {
 
       // Generate tokens
       const tokens = TokenService.generateTokenPair(user);
+
+      // Store refresh token in database
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await RefreshToken.create({
+        user_id: user.id,
+        token: tokens.refreshToken,
+        expires_at: expiresAt,
+      });
 
       res.status(201).json({
         message: 'User registered successfully',
@@ -91,6 +100,14 @@ class AuthController {
       // Generate tokens
       const tokens = TokenService.generateTokenPair(user);
 
+      // Store refresh token in database
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await RefreshToken.create({
+        user_id: user.id,
+        token: tokens.refreshToken,
+        expires_at: expiresAt,
+      });
+
       res.json({
         message: 'Login successful',
         user: {
@@ -106,6 +123,93 @@ class AuthController {
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'Failed to login',
+      });
+    }
+  }
+
+  /**
+   * Refresh token - rotate old refresh token and issue new pair
+   * POST /api/auth/refresh-token
+   */
+  static async refreshToken(req, res) {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({
+          error: 'Bad Request',
+          message: 'Refresh token is required',
+        });
+      }
+
+      // Verify the refresh token JWT
+      let decoded;
+      try {
+        decoded = TokenService.verifyRefreshToken(refreshToken);
+      } catch (error) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid or expired refresh token',
+        });
+      }
+
+      // Check if token exists in database and is not revoked
+      const storedToken = await RefreshToken.findByToken(refreshToken);
+      if (!storedToken) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Refresh token not found',
+        });
+      }
+
+      if (storedToken.revoked) {
+        // Possible token reuse attack - revoke all tokens for this user
+        await RefreshToken.revokeAllForUser(storedToken.user_id);
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Token reuse detected. All sessions have been revoked.',
+        });
+      }
+
+      if (new Date(storedToken.expires_at) < new Date()) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Refresh token has expired',
+        });
+      }
+
+      // Revoke the old refresh token (rotation)
+      await RefreshToken.revoke(refreshToken);
+
+      // Get user data
+      const user = await User.findById(decoded.id);
+      if (!user || !user.is_active) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'User not found or deactivated',
+        });
+      }
+
+      // Generate new token pair
+      const tokens = TokenService.generateTokenPair(user);
+
+      // Store new refresh token
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await RefreshToken.create({
+        user_id: user.id,
+        token: tokens.refreshToken,
+        expires_at: expiresAt,
+      });
+
+      res.json({
+        message: 'Tokens refreshed successfully',
+        ...tokens,
+      });
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to refresh token',
       });
     }
   }
