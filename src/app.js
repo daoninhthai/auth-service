@@ -5,8 +5,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+const passport = require('./config/passport');
 const authRoutes = require('./routes/auth');
 const passwordRoutes = require('./routes/password');
+const oauthRoutes = require('./routes/oauth');
 
 const app = express();
 
@@ -21,6 +23,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
+app.use(passport.initialize());
 
 // Health check
 app.get('/health', (req, res) => {
@@ -34,6 +37,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/password', passwordRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
