@@ -111,6 +111,100 @@ class OAuthController {
   }
 
   /**
+   * Handle GitHub OAuth callback
+   * GET /api/oauth/github/callback
+   */
+  static async handleGithubCallback(req, res) {
+    try {
+      const oauthData = req.user;
+
+      if (!oauthData) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'GitHub OAuth authentication failed',
+        });
+      }
+
+      // Check if this GitHub account is already linked
+      let existingOAuth = await OAuthProvider.findByProvider('github', oauthData.provider_id);
+
+      let user;
+
+      if (existingOAuth) {
+        user = {
+          id: existingOAuth.user_id,
+          email: existingOAuth.email,
+          full_name: existingOAuth.full_name,
+          role: existingOAuth.role,
+        };
+
+        await OAuthProvider.link({
+          user_id: user.id,
+          provider: 'github',
+          provider_id: oauthData.provider_id,
+          access_token: oauthData.access_token,
+          profile: oauthData.profile,
+        });
+      } else {
+        let existingUser = null;
+        if (oauthData.email) {
+          existingUser = await User.findByEmail(oauthData.email);
+        }
+
+        if (existingUser) {
+          user = existingUser;
+          await OAuthProvider.link({
+            user_id: user.id,
+            provider: 'github',
+            provider_id: oauthData.provider_id,
+            access_token: oauthData.access_token,
+            profile: oauthData.profile,
+          });
+        } else {
+          const randomPassword = crypto.randomBytes(32).toString('hex');
+          const password_hash = await bcrypt.hash(randomPassword, 12);
+
+          user = await User.create({
+            email: oauthData.email,
+            password_hash,
+            full_name: oauthData.full_name,
+          });
+
+          await User.verifyEmail(user.id);
+
+          await OAuthProvider.link({
+            user_id: user.id,
+            provider: 'github',
+            provider_id: oauthData.provider_id,
+            access_token: oauthData.access_token,
+            profile: oauthData.profile,
+          });
+        }
+      }
+
+      const tokens = TokenService.generateTokenPair(user);
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await RefreshToken.create({
+        user_id: user.id,
+        token: tokens.refreshToken,
+        expires_at: expiresAt,
+      });
+
+      const redirectUrl = process.env.OAUTH_REDIRECT_URL || '/';
+      res.redirect(
+        `${redirectUrl}?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`
+      );
+    } catch (error) {
+      console.error('GitHub OAuth callback error:', error);
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'GitHub OAuth authentication failed',
+      });
+    }
+  }
+
+  /**
    * Link OAuth provider to existing account
    * POST /api/oauth/link
    */

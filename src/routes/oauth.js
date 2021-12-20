@@ -24,6 +24,26 @@ router.get(
   OAuthController.handleGoogleCallback
 );
 
+// GitHub OAuth
+// GET /api/oauth/github - Initiate GitHub OAuth
+router.get(
+  '/github',
+  passport.authenticate('github', {
+    scope: ['user:email'],
+    session: false,
+  })
+);
+
+// GET /api/oauth/github/callback - GitHub OAuth callback
+router.get(
+  '/github/callback',
+  passport.authenticate('github', {
+    session: false,
+    failureRedirect: '/api/oauth/failure',
+  }),
+  OAuthController.handleGithubCallback
+);
+
 // Protected routes (require authentication)
 // GET /api/oauth/providers - Get linked OAuth providers
 router.get('/providers', verifyToken, OAuthController.getLinkedProviders);
