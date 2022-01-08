@@ -2,28 +2,31 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const morgan = require('morgan');
 
 const passport = require('./config/passport');
+const { helmetConfig, corsOptions, xssProtection, requestId } = require('./middleware/security');
+const { generalLimiter, authLimiter, passwordResetLimiter } = require('./middleware/rateLimiter');
 const authRoutes = require('./routes/auth');
 const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
 
 const app = express();
 
-// Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+// Security middleware
+app.use(helmetConfig);
+app.use(cors(corsOptions));
+app.use(requestId);
+app.use(xssProtection);
+
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 app.use(passport.initialize());
+
+// Apply general rate limiter to all routes
+app.use(generalLimiter);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -34,9 +37,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/password', passwordRoutes);
+// Routes with specific rate limiters
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/password', passwordResetLimiter, passwordRoutes);
 app.use('/api/oauth', oauthRoutes);
 
 // Root endpoint
