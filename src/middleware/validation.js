@@ -49,6 +49,44 @@ const loginSchema = Joi.object({
     }),
 });
 
+const updateProfileSchema = Joi.object({
+  full_name: Joi.string()
+    .min(2)
+    .max(255)
+    .trim()
+    .messages({
+      'string.min': 'Full name must be at least 2 characters',
+    }),
+  email: Joi.string()
+    .email()
+    .trim()
+    .lowercase()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+    }),
+}).min(1).messages({
+  'object.min': 'At least one field must be provided for update',
+});
+
+const changePasswordSchema = Joi.object({
+  current_password: Joi.string()
+    .required()
+    .messages({
+      'any.required': 'Current password is required',
+    }),
+  new_password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .required()
+    .messages({
+      'string.min': 'New password must be at least 8 characters',
+      'string.max': 'New password must not exceed 128 characters',
+      'string.pattern.base': 'New password must contain at least one uppercase letter, one lowercase letter, and one number',
+      'any.required': 'New password is required',
+    }),
+});
+
 /**
  * Middleware factory for Joi validation
  * @param {Object} schema - Joi validation schema
@@ -81,5 +119,7 @@ const validate = (schema) => {
 module.exports = {
   registerSchema,
   loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
   validate,
 };

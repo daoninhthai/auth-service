@@ -10,6 +10,7 @@ const { generalLimiter, authLimiter, passwordResetLimiter } = require('./middlew
 const authRoutes = require('./routes/auth');
 const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
+const userRoutes = require('./routes/users');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/password', passwordResetLimiter, passwordRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/users', userRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
