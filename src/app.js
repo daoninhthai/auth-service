@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
 const userRoutes = require('./routes/users');
+const verificationRoutes = require('./routes/verification');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/password', passwordResetLimiter, passwordRoutes);
 app.use('/api/oauth', oauthRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/verification', verificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
