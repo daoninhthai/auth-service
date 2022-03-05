@@ -13,6 +13,7 @@ const oauthRoutes = require('./routes/oauth');
 const userRoutes = require('./routes/users');
 const verificationRoutes = require('./routes/verification');
 const adminRoutes = require('./routes/admin');
+const sessionRoutes = require('./routes/sessions');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/sessions', sessionRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
