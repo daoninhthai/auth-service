@@ -15,6 +15,7 @@ const verificationRoutes = require('./routes/verification');
 const adminRoutes = require('./routes/admin');
 const sessionRoutes = require('./routes/sessions');
 const twoFactorRoutes = require('./routes/twoFactor');
+const apiKeyRoutes = require('./routes/apiKeys');
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/2fa', twoFactorRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
