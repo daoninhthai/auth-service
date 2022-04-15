@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const passport = require('./config/passport');
 const { helmetConfig, corsOptions, xssProtection, requestId } = require('./middleware/security');
 const { generalLimiter, authLimiter, passwordResetLimiter } = require('./middleware/rateLimiter');
+const { auditMiddleware } = require('./middleware/auditMiddleware');
 const authRoutes = require('./routes/auth');
 const passwordRoutes = require('./routes/password');
 const oauthRoutes = require('./routes/oauth');
@@ -33,6 +34,9 @@ app.use(passport.initialize());
 
 // Apply general rate limiter to all routes
 app.use(generalLimiter);
+
+// Audit logging
+app.use(auditMiddleware);
 
 // Health check
 app.get('/health', (req, res) => {
